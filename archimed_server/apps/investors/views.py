@@ -3,6 +3,9 @@ from rest_framework.response import Response
 from rest_framework import status 
 from .serializers import InvestorSerializer
 from .models import Investor
+from apps.bills.views import create_subscription
+from apps.bills.serializers import BillSerializer
+
 
 @api_view(['GET'])
 def get_investors(request):
@@ -12,12 +15,27 @@ def get_investors(request):
 
 @api_view(['POST'])
 def create_investor(request):
-    data = request.data
-    serializer = InvestorSerializer(data=data)
+    serializer = InvestorSerializer(data=request.data)
+    
     if serializer.is_valid():
-        serializer.save()
+        investor = serializer.save()
+        
+        if investor.invested_amount < 50000:
+            bill_data = {
+                "investor": investor.id,
+                "bill_type": "membership",
+                "amount": 3000,
+                "description": "Yearly subscription fee"
+            }
+            bill_serializer = BillSerializer(data=bill_data)
+            if bill_serializer.is_valid():
+                bill_serializer.save()
+            else:
+                print("Error creating subscription bill:", bill_serializer.errors)
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE', 'PATCH'])
 def handle_investor(request, pk):

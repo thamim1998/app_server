@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from rest_framework import status 
 from .serializers import InvestorSerializer
 from .models import Investor
-from apps.bills.serializers import BillSerializer
 
 @api_view(['GET'])
 def get_investors(request):

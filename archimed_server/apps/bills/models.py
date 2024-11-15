@@ -16,7 +16,14 @@ class Bill(models.Model):
     amount = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     issue_date = models.DateTimeField(default=timezone.now)
     bill_year = models.IntegerField(null=True, blank=True)
-    description = models.TextField(null=True, blank=True)        
+    description = models.TextField(null=True, blank=True) 
+    capital = models.ForeignKey(
+        'capital.Capital',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='related_bills'
+    )       
 
     def __str__(self):
         return f'{self.bill_type} for {self.investor.name} - {self.amount}'
@@ -31,10 +38,11 @@ class Bill(models.Model):
         print('Before April 2019')
         if which_year == 1:
             # First-year fee based on partial year investment
-            yearly_fee = (Decimal(10.00) / 365) * self.investor.fee_percentage * self.investor.invested_amount
+            print('Amount',(Decimal((10.00) / 365) * fee_percentage * self.investor.invested_amount).quantize(Decimal("0.01")))
+            yearly_fee = (Decimal((10.00) / 365) * fee_percentage * self.investor.invested_amount).quantize(Decimal("0.01"))
         else:
             # For subsequent years, use the fee percentage directly
-            yearly_fee = self.investor.fee_percentage * self.investor.invested_amount
+            yearly_fee = (fee_percentage * self.investor.invested_amount).quantize(Decimal("0.01"))
       else:
         print('After April 2019')
         # Case 2: After April 2019

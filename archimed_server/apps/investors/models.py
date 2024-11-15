@@ -29,6 +29,6 @@ class Investor(models.Model):
             if bill.bill_type not in bill_years:
                 bill_years[bill.bill_type] = []
 
-            bill_years[bill.bill_type].append(bill.issue_date.year)
+            bill_years[bill.bill_type].append(bill.bill_year)
 
         return bill_years

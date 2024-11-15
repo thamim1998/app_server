@@ -20,5 +20,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('apps.investors.urls')), 
     path('api/', include('apps.bills.urls')),
-    # path('api/', include('apps.capital_calls.urls')),
+    path('api/', include('apps.capital.urls')),
 ]

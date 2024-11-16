@@ -6,4 +6,4 @@ class InvestorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Investor
-        fields = ['id', 'name', 'email', 'iban', 'invested_amount', 'subscription_fee_waived','upfront_fees_paid','bill_type_year', 'fee_percentage', 'invested_date']
+        fields = ['id', 'name', 'email', 'iban', 'invested_amount', 'subscription_fee_waived','upfront_fees_paid','bill_type_year', 'fee_percentage', 'invested_date', 'is_active','membership_year', 'years_paid']

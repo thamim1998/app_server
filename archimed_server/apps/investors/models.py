@@ -11,13 +11,16 @@ class Investor(models.Model):
     fee_percentage = models.DecimalField(max_digits=5, decimal_places=3, default=10.0)
     upfront_fees_paid = models.BooleanField(default=False)
     invested_date = models.DateField(default=timezone.now)
+    years_paid = models.IntegerField(blank=True,default=1)
+    membership_year = models.IntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.name} ({self.email})"
    
     @property
     def subscription_fee_waived(self):
         return self.invested_amount > 50000
-
-    def __str__(self):
-        return f"{self.name} ({self.email})"
     
     @property
     def bill_type_year(self):

@@ -6,7 +6,6 @@ from .models import Bill
 from .serializers import BillSerializer
 from django.shortcuts import get_object_or_404
 from apps.investors.models import Investor
-from decimal import Decimal
 
 @api_view(['GET'])
 def get_all_bills(request):
@@ -33,8 +32,20 @@ def create_subscription(request, investor_id):
             {"error": "Investor has invested more than 50,000 EUR and is exempt from membership fees."},
             status=status.HTTP_400_BAD_REQUEST
         )
+    
+    if not investor.is_active:
+        return Response(
+            {"error": "Investor is not an active member."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if (investor.membership_year is None) or (investor.membership_year > current_year):
+        return Response(
+            {"error":"Enter valid membership year"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-    for year in range(investor.invested_date.year, current_year + 1):
+    for year in range(investor.membership_year, current_year + 1):
         if Bill.objects.filter(investor=investor, bill_type="membership", bill_year=year).exists():
             continue
 
@@ -68,29 +79,39 @@ def create_subscription(request, investor_id):
 def create_upfront_fees(request, investor_id):
     try:
         investor = get_object_or_404(Investor, id=investor_id)
+        current_date = date.today()
+        bill = Bill(investor=investor, bill_type="yearly_fees", issue_date=current_date)
+       
+        last_paid_year = (
+            investor.bill_type_year["upfront_fees"][-1] if "upfront_fees" in investor.bill_type_year else investor.invested_date.year
+        )
 
-        if investor.upfront_fees_paid:
-            return Response(
-                {"error": "Investor has already paid upfront fees and cannot be billed again for upfront fees."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        next_bill_year = last_paid_year + 5
 
-        upfront_fee_amount = Decimal(investor.fee_percentage * investor.invested_amount * 5).quantize(Decimal("0.01"))
-        print(upfront_fee_amount)
+        
+        print(investor.invested_date.year + 4)
 
+        upfront_fee_amount = bill.calculate_upfront_fee()
+        print('upfront_fee_amount', upfront_fee_amount)
+
+        fee_paid_year = investor.years_paid + 4
+        
         bill_data = {
             "investor": investor.id,
             "bill_type": "upfront_fees",
             "amount": upfront_fee_amount,
-            "description": request.data.get("description", "Upfront fees for investment"),
-            "bill_year": date.today().year
+            "description": f"Upfront fees paid till {next_bill_year}",
+            "bill_year":next_bill_year
         }
 
         serializer = BillSerializer(data=bill_data)
         if serializer.is_valid():
             serializer.save()
 
+            # Update the investor's upfront fee status and years paid
             investor.upfront_fees_paid = True
+            investor.years_paid += 5
+            investor.bill_type_year["upfront_fees"].append(next_bill_year)
             investor.save()
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -136,7 +157,7 @@ def update_bill(request,pk):
     serializer = BillSerializer(bill, data=request.data)
     if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
@@ -157,7 +178,7 @@ def create_yearly_fees(request, investor_id):
         current_year = current_date.year
 
         yearly_fees = []
-        which_year = 1  # Track the year in terms of fees (1st year, 2nd year, etc.)
+        years_paid = investor.years_paid  # Track the year in terms of fees (1st year, 2nd year, etc.)
 
         # Iterate through the years since the investment
         for year in range(investment_date.year, current_year + 1):  # +1 to include current year
@@ -170,14 +191,14 @@ def create_yearly_fees(request, investor_id):
             bill = Bill(investor=investor, bill_type="yearly_fees", issue_date=current_date)
 
             # Calculate the yearly fee using the calculate_yearly_fee method
-            yearly_fee = bill.calculate_yearly_fee(current_date, which_year)
+            yearly_fee = bill.calculate_yearly_fee(years_paid)
 
             # Prepare bill data
             bill_data = {
                 "investor": investor.id,
                 "bill_type": "yearly_fees",
                 "amount": yearly_fee,
-                "description": f"Yearly subscription fee for {which_year}th year ({year} investment)",
+                "description": f"Yearly subscription fee for {years_paid}th year ({year} investment)",
                 "bill_year": year
             }
             print('current_year', year)
@@ -187,7 +208,7 @@ def create_yearly_fees(request, investor_id):
             if serializer.is_valid():
                 # Save the bill instance
                 # Increment the year of fee (1st, 2nd, etc.)
-                which_year += 1
+                years_paid += 1
                 serializer.save()  # Save the bill after successful validation
                 yearly_fees.append(serializer.data)
             else:

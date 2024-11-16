@@ -14,66 +14,18 @@ def get_all_bills(request):
       return Response(serializer.data)
 
 @api_view(['POST'])
-def create_bill(request):
-     serializer = BillSerializer(data=request.data)
-     if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['POST'])
 def create_subscription(request, investor_id):
-    subscriptions = []
+    # Retrieve the investor object
     investor = get_object_or_404(Investor, id=investor_id)
-    current_year = date.today().year
 
-    if investor.subscription_fee_waived:
-        return Response(
-            {"error": "Investor has invested more than 50,000 EUR and is exempt from membership fees."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    if not investor.is_active:
-        return Response(
-            {"error": "Investor is not an active member."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    if (investor.membership_year is None) or (investor.membership_year > current_year):
-        return Response(
-            {"error":"Enter valid membership year"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    # Call the model's method to create the membership bills
+    result = Bill.create_membership_bills(investor)
 
-    for year in range(investor.membership_year, current_year + 1):
-        if Bill.objects.filter(investor=investor, bill_type="membership", bill_year=year).exists():
-            continue
-
-        # Create the bill data
-        subscription_fees = 3000
-        bill_data = {
-            "investor": investor.id,
-            "bill_type": "membership",
-            "amount": subscription_fees,
-            "bill_year": year
-        }
-        print(f"Creating subscription for year {year}: {bill_data}")
-
-        serializer = BillSerializer(data=bill_data)
-        if serializer.is_valid():
-            serializer.save() 
-            subscriptions.append(serializer.data)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    # Return the list of created subscriptions
-    if subscriptions:
-        return Response(subscriptions, status=status.HTTP_201_CREATED)
+    # Handle the result returned by the model method
+    if isinstance(result, list):  # If bills were created
+        return Response([bill for bill in result], status=status.HTTP_201_CREATED)
     else:
-        return Response(
-            {"message": "No new subscription bills created; all years already billed."},
-            status=status.HTTP_200_OK
-        )
+        return Response(result, status=status.HTTP_400_BAD_REQUEST)
     
 @api_view(['POST'])
 def create_upfront_fees(request, investor_id):

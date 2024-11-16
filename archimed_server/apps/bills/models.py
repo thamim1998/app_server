@@ -30,9 +30,49 @@ class Bill(models.Model):
     def __str__(self):
         return f'{self.bill_type} for {self.investor.name} - {self.amount}'
     
+    @classmethod
+    def create_membership_bills(cls, investor):
+        current_year = date.today().year
+        subscriptions = []
+
+        # Check if investor is eligible for subscription fees
+        if investor.subscription_fee_waived:
+            return {"error": "Investor has invested more than 50,000 EUR and is exempt from membership fees."}
+        
+        if not investor.is_active:
+            return {"error": "Investor is not an active member."}
+        
+        if not investor.membership_year or investor.membership_year > current_year:
+            return {"error": "Enter valid membership year"}
+
+        # Generate bills for the years since the membership year up to the current year
+        for year in range(investor.membership_year, current_year + 1):
+            if cls.objects.filter(investor=investor, bill_type="membership", bill_year=year).exists():
+                continue  # Skip if the bill already exists for the year
+
+            # Subscription fee is a fixed amount
+            subscription_fees = Decimal("3000.00")
+
+            # Create a bill entry
+            bill_data = {
+                "investor": investor,
+                "bill_type": "membership",
+                "amount": subscription_fees,
+                "bill_year": year,
+                "description": f"Membership fee for year {year}"
+            }
+
+            bill = cls(**bill_data)
+            bill.save()  # Save the bill in the database
+            subscriptions.append(bill)
+
+        if subscriptions:
+            return subscriptions
+        else:
+            return {"message": "No new subscription bills created; all years already billed."}
+    
     def calculate_upfront_fee(self):
         fee_percentage = self.investor.fee_percentage / 100  # 8.5% becomes 0.085
-
         upfront_fee_amount = Decimal((fee_percentage) * (self.investor.invested_amount) * (5)).quantize(Decimal("0.01"))
         return upfront_fee_amount
 

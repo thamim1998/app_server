@@ -166,16 +166,21 @@ def create_yearly_fees(request, investor_id):
         # Retrieve the investor
         investor = get_object_or_404(Investor, id=investor_id)
 
-        # Ensure the investor hasn't already paid upfront fees
-        if investor.upfront_fees_paid:
-            return Response(
-                {"error": "Investor has already paid upfront fees and cannot be billed for yearly fees."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         current_date = date.today()  # Get the current date
         investment_date = investor.invested_date
         current_year = current_date.year
+
+        last_upfront_year = (
+            investor.bill_type_year["upfront_fees"][-1]
+            if "upfront_fees" in investor.bill_type_year
+            else None
+        )
+        
+        if last_upfront_year and last_upfront_year > current_year:
+            return Response(
+                {"error": "Investor has already paid upfront fees covering years beyond the current year."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         yearly_fees = []
         years_paid = investor.years_paid  # Track the year in terms of fees (1st year, 2nd year, etc.)

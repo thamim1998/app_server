@@ -3,6 +3,7 @@ from django.utils import timezone
 from apps.investors.models import Investor
 from datetime import date
 from decimal import Decimal
+from apps.investment.models import Investment
 
 class Bill(models.Model):
     BILL_TYPES = [
@@ -17,6 +18,7 @@ class Bill(models.Model):
     issue_date = models.DateTimeField(default=timezone.now)
     bill_year = models.IntegerField(null=True, blank=True)
     description = models.TextField(null=True, blank=True) 
+    investment = models.ForeignKey(Investment, on_delete=models.SET_NULL, null=True, blank=True, default=None)
     capital = models.ForeignKey(
         'capital.Capital',
         null=True,

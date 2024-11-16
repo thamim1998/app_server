@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'apps.investors',
     'apps.bills',
     'apps.capital',
+    'apps.investment',
 ]
 
 MIDDLEWARE = [

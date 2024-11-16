@@ -7,11 +7,7 @@ class Investor(models.Model):
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     iban = models.CharField(max_length=34, unique=True) 
-    invested_amount = models.DecimalField(max_digits=12, decimal_places=2) 
-    fee_percentage = models.DecimalField(max_digits=5, decimal_places=3, default=10.0)
-    upfront_fees_paid = models.BooleanField(default=False)
-    invested_date = models.DateField(default=timezone.now)
-    years_paid = models.IntegerField(blank=True,default=1)
+    invested_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     membership_year = models.IntegerField(null=True, blank=True)
     is_active = models.BooleanField(default=False)
 

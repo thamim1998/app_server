@@ -73,19 +73,22 @@ class Bill(models.Model):
             return {"message": "No new subscription bills created; all years already billed."}
     
     def calculate_upfront_fee(self):
-        fee_percentage = self.investment.get_fee_percentage() / 100
+        fee_percentage = self.investment.get_fee_percentage()
         upfront_fee_amount = Decimal(fee_percentage * self.investment.investment_amount * 5).quantize(Decimal("0.01"))
         return upfront_fee_amount
 
     def calculate_yearly_fee(self,years_paid):
-      fee_percentage = self.investment.fee_percentage() / 100  # 8.5% becomes 0.085
+      print('before', self.investment.get_fee_percentage())
+    
+      fee_percentage = self.investment.get_fee_percentage()  # 8.5% becomes 0.085
+      print('fee_perce', fee_percentage)
 
     # Case 1: Before April 2019
-      if self.investor.invested_date < date(2019, 4, 1):
+      if self.investment.investment_date < date(2019, 4, 1):
         print('Before April 2019')
-        if years_paid == 1:
+        if years_paid == 0:
             # First-year fee based on partial year investment
-            print('Amount',(Decimal((10.00) / 365) * fee_percentage * self.investor.invested_amount).quantize(Decimal("0.01")))
+            print('Amount',(Decimal(10.00) / 365 * fee_percentage * self.investor.invested_amount).quantize(Decimal("0.01")))
             yearly_fee = (Decimal((10.00) / 365) * fee_percentage * self.investor.invested_amount).quantize(Decimal("0.01"))
         else:
             # For subsequent years, use the fee percentage directly
@@ -93,19 +96,19 @@ class Bill(models.Model):
       else:
         print('After April 2019')
         # Case 2: After April 2019
-        if  years_paid == 1:
+        if  years_paid == 0:
             # First-year fee calculation for investment after 2019, based on partial year
             print('First year after April 2019')
             yearly_fee = Decimal((10) * (fee_percentage) * self.investor.invested_amount).quantize(Decimal("0.01"))
-        elif  years_paid == 2:
+        elif  years_paid == 1:
             # Second year: apply the original fee percentage
             print('Second year')
             yearly_fee = Decimal((fee_percentage) * self.investor.invested_amount).quantize(Decimal("0.01"))
-        elif  years_paid == 3:
+        elif  years_paid == 2:
             # Third year: fee percentage reduced by 0.2%
             print('Third year')
             yearly_fee = Decimal((fee_percentage - Decimal(0.2 / 100)) * self.investor.invested_amount).quantize(Decimal("0.01"))
-        elif  years_paid == 4:
+        elif  years_paid == 3:
             # Fourth year: fee percentage reduced by 0.5%
             print('Fourth year')
             yearly_fee = Decimal((fee_percentage - Decimal(0.5 / 100)) * self.investor.invested_amount).quantize(Decimal("0.01"))

@@ -6,5 +6,4 @@ urlpatterns = [
     path('investments/<int:investor_id>/', get_investments, name='get_investments'),
     path('investments/', get_all_investment, name = 'get_all_investment'),
     path('investment/delete/<int:investment_id>', delete_investment, name = 'get_all_investment'),
-
 ]

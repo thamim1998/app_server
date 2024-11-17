@@ -45,6 +45,13 @@ def get_investments(request, investor_id):
 
 @api_view(['GET'])
 def get_all_investment(request):
-      bills = Investment.objects.all()
-      serializer = InvestmentSerializer(bills, many=True)
+      investments = Investment.objects.all()
+      serializer = InvestmentSerializer(investments, many=True)
+      return Response(serializer.data)
+
+@api_view(['DELETE'])
+def delete_investment(request,investment_id):
+      investments = Investment.objects.all()
+      serializer = InvestmentSerializer(investments, many=True)
+      investments.delete()
       return Response(serializer.data)

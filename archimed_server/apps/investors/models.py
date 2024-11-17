@@ -17,17 +17,3 @@ class Investor(models.Model):
     @property
     def subscription_fee_waived(self):
         return self.invested_amount > 50000
-    
-    @property
-    def bill_type_year(self):
-        from apps.bills.models import Bill
-        bill_years = {}
-        bills = Bill.objects.filter(investor=self)
-
-        for bill in bills:
-            if bill.bill_type not in bill_years:
-                bill_years[bill.bill_type] = []
-
-            bill_years[bill.bill_type].append(bill.bill_year)
-
-        return bill_years

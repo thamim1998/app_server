@@ -4,6 +4,7 @@ from apps.investors.models import Investor
 from datetime import date
 from decimal import Decimal
 from apps.investment.models import Investment
+from apps.utils import get_current_year
 
 class Bill(models.Model):
     BILL_TYPES = [
@@ -12,13 +13,13 @@ class Bill(models.Model):
         ('yearly_fees', 'Yearly Fees'),
     ]
 
-    investor = models.ForeignKey(Investor, related_name='bills', on_delete=models.CASCADE)
+    investor = models.ForeignKey(Investor, related_name='bills', on_delete=models.CASCADE)   
+    investment = models.ForeignKey(Investment, related_name='bills', on_delete=models.CASCADE)
     bill_type = models.CharField(max_length=20, choices=BILL_TYPES)
     amount = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     issue_date = models.DateTimeField(default=timezone.now)
     bill_year = models.IntegerField(null=True, blank=True)
     description = models.TextField(null=True, blank=True) 
-    investment = models.ForeignKey(Investment, on_delete=models.SET_NULL, null=True, blank=True, default=None)
     capital = models.ForeignKey(
         'capital.Capital',
         null=True,
@@ -32,7 +33,7 @@ class Bill(models.Model):
     
     @classmethod
     def create_membership_bills(cls, investor):
-        current_year = date.today().year
+        current_year = get_current_year()
         subscriptions = []
 
         # Check if investor is eligible for subscription fees
@@ -72,12 +73,12 @@ class Bill(models.Model):
             return {"message": "No new subscription bills created; all years already billed."}
     
     def calculate_upfront_fee(self):
-        fee_percentage = self.investor.fee_percentage / 100  # 8.5% becomes 0.085
-        upfront_fee_amount = Decimal((fee_percentage) * (self.investor.invested_amount) * (5)).quantize(Decimal("0.01"))
+        fee_percentage = self.investment.get_fee_percentage() / 100
+        upfront_fee_amount = Decimal(fee_percentage * self.investment.investment_amount * 5).quantize(Decimal("0.01"))
         return upfront_fee_amount
 
     def calculate_yearly_fee(self,years_paid):
-      fee_percentage = self.investor.fee_percentage / 100  # 8.5% becomes 0.085
+      fee_percentage = self.investment.fee_percentage() / 100  # 8.5% becomes 0.085
 
     # Case 1: Before April 2019
       if self.investor.invested_date < date(2019, 4, 1):

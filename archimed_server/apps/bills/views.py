@@ -1,11 +1,12 @@
-from datetime import date, datetime
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from apps.investment.models import Investment
 from .models import Bill
 from .serializers import BillSerializer
 from django.shortcuts import get_object_or_404
 from apps.investors.models import Investor
+from apps.utils import get_current_year, get_current_date
 
 @api_view(['GET'])
 def get_all_bills(request):
@@ -23,104 +24,69 @@ def create_subscription(request, investor_id):
 
     # Handle the result returned by the model method
     if isinstance(result, list):  # If bills were created
-        return Response([bill for bill in result], status=status.HTTP_201_CREATED)
+        # Serialize the Bill objects and return them in the response
+        serializer = BillSerializer(result, many=True)  # `many=True` to serialize a list of objects
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
     else:
+        # If there's an error or no bills were created
         return Response(result, status=status.HTTP_400_BAD_REQUEST)
     
+
 @api_view(['POST'])
-def create_upfront_fees(request, investor_id):
+def create_upfront_fees(request, investment_id):
     try:
-        investor = get_object_or_404(Investor, id=investor_id)
-        current_date = date.today()
-        bill = Bill(investor=investor, bill_type="yearly_fees", issue_date=current_date)
-       
-        last_paid_year = (
-            investor.bill_type_year["upfront_fees"][-1] if "upfront_fees" in investor.bill_type_year else investor.invested_date.year
-        )
+        # Fetch the investment object
+        investment = get_object_or_404(Investment, id=investment_id)
+        investor = investment.investor  # Get the associated investor for this investment
+        current_date = get_current_date()
 
-        next_bill_year = last_paid_year + 5
-
-        
-        print(investor.invested_date.year + 4)
-
+        # Calculate the upfront fee using the helper method
+        bill = Bill(investor=investor, investment=investment, bill_type="upfront_fees", issue_date=current_date)
         upfront_fee_amount = bill.calculate_upfront_fee()
-        print('upfront_fee_amount', upfront_fee_amount)
+        print('investorid',investor.id)
+        years_paid = investment.years_paid + 5
+        print('years_apid',years_paid)
+        investment_year = investment.investment_date.year + years_paid
+        print(investment.investment_date.year, years_paid)
+        print('invest', investment_year)
 
-        fee_paid_year = investor.years_paid + 4
-        
         bill_data = {
             "investor": investor.id,
+            "investment": investment.id,
             "bill_type": "upfront_fees",
+            "bill_year" : investment_year,
             "amount": upfront_fee_amount,
-            "description": f"Upfront fees paid till {next_bill_year}",
-            "bill_year":next_bill_year
+            "description": f"Upfront fees paid till {investment_year}"
         }
-
+        # Serialize and save the bill
         serializer = BillSerializer(data=bill_data)
         if serializer.is_valid():
             serializer.save()
 
-            # Update the investor's upfront fee status and years paid
-            investor.upfront_fees_paid = True
-            investor.years_paid += 5
-            investor.bill_type_year["upfront_fees"].append(next_bill_year)
-            investor.save()
+            # Update the investment's upfront fee status
+            investment.upfront_fees_paid = True
+            print('paid')
+            investment.years_paid = years_paid
+            print('notpaid')
+            investment.bill_type_year["upfront_fees"].append(investment_year)
+            investment.save()
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     except Exception as e:
-        return Response(
-            {"error": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-@api_view(['GET'])
-def get_bill_by_investor(request,investor_id):
-     try:
-        bills = Bill.objects.filter(investor_id=investor_id)
-        if not bills:
-            return Response({"detail": "No bills found for this investor."}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = BillSerializer(bills, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-     except Bill.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-     
-@api_view(['DELETE'])
-def delete_bill(request,pk):
-    try:
-        bill = Bill.objects.get(pk=pk)
-    except Bill.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    bill.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
-
-@api_view(['PUT'])
-def update_bill(request,pk):
-    try:
-        bill = Bill.objects.get(pk=pk)
-    except Bill.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-    
-    serializer = BillSerializer(bill, data=request.data)
-    if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 @api_view(['POST'])
 def create_yearly_fees(request, investor_id):
     try:
         # Retrieve the investor
         investor = get_object_or_404(Investor, id=investor_id)
 
-        current_date = date.today()  # Get the current date
         investment_date = investor.invested_date
-        current_year = current_date.year
+        current_year = get_current_year()
+        current_date = get_current_date()
 
         last_upfront_year = (
             investor.bill_type_year["upfront_fees"][-1]
@@ -185,3 +151,39 @@ def create_yearly_fees(request, investor_id):
             {"error": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+@api_view(['GET'])
+def get_bill_by_investor(request,investor_id):
+     try:
+        bills = Bill.objects.filter(investor_id=investor_id)
+        if not bills:
+            return Response({"detail": "No bills found for this investor."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = BillSerializer(bills, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+     except Bill.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+     
+@api_view(['DELETE'])
+def delete_bill(request,pk):
+    try:
+        bill = Bill.objects.get(pk=pk)
+    except Bill.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    
+    bill.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['PUT'])
+def update_bill(request,pk):
+    try:
+        bill = Bill.objects.get(pk=pk)
+    except Bill.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    
+    serializer = BillSerializer(bill, data=request.data)
+    if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

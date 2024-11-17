@@ -4,7 +4,7 @@ from .models import Bill
 class BillSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bill
-        fields = ['id', 'investor', 'bill_type', 'amount','bill_year','capital', 'issue_date', 'description']
+        fields = ['id', 'investor','investment', 'bill_type', 'amount','bill_year','capital', 'issue_date', 'description']
 
     
     def validate(self, data):

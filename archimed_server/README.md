@@ -1,13 +1,13 @@
 # Description about the every segment of this system
 
 ## **Investment Date Validity**
-It is assumed that the investment_date is valid and falls within the same calendar year as the fee calculation. The calculation considers only the fraction of the year after the investment date.
+It is assumed that the **investment_date** is valid and falls within the same calendar year as the fee calculation. The calculation considers only the fraction of the year after the investment date.
 
 ## **Fee Percentage**
-The fee_percentage is provided as a whole number (e.g., 9.5), which is converted to a decimal (e.g., 0.095) for calculation.
+The **fee_percentage** is provided as a whole number (e.g., 9.5), which is converted to a decimal (e.g., 0.095) for calculation.
 
 ## **End of Year**
-The end of the year is fixed as December 31st of the same year as the investment_date.
+The end of the year is fixed as December 31st of the same year as the **investment_date**.
 
 ## **Leap Year Consideration**
 The solution handles both regular years (365 days) and leap years (366 days) by checking if the year is a leap year.
@@ -16,7 +16,7 @@ The solution handles both regular years (365 days) and leap years (366 days) by 
 The fee is calculated proportionally to the number of years investment made. Based on the years, fee percentage might change.
 
 ## **Input Data Validity**
-The input data (investment amount, fee percentage, and investment date) is assumed to be valid and correctly formatted.
+The input data (**investment amount**, **fee percentage**, and **investment date**) is assumed to be valid and correctly formatted.
 
 # **Edge Cases Handled in This System**
 

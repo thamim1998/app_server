@@ -7,13 +7,11 @@ from .serializers import CapitalSerializer
 from .models import Capital
 from django.shortcuts import get_object_or_404
 
-
 @api_view(["POST"])
 def create_capital(request):
     investor_id = request.data.get("investor_id")
     bill_ids = request.data.get("bill_ids", [])
     due_date = request.data.get("due_date")
-
 
     if not len(bill_ids):
         return Response({"error": "Atleast one bill is required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -54,7 +52,6 @@ def create_capital(request):
     serializer = CapitalSerializer(data=capital_data)
     investor = get_object_or_404(Investor, id=investor_id)
 
-    print('serializer',serializer)
     if serializer.is_valid():
         capital = serializer.save(investor = investor)
         capital.bills.set(bills)
@@ -62,6 +59,7 @@ def create_capital(request):
             bill.capital = capital  # Assign the capital to the bill
             bill.save()  # Save each bi
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

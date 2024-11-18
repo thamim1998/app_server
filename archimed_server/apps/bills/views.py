@@ -23,8 +23,6 @@ def create_subscription(request, investor_id):
     # Call the model's method to create the membership bills
     result = Bill.create_membership_bills(investor)
 
-    print('result', result)
-
     # Handle the result returned by the model method
     if isinstance(result, list):  # If bills were created
         # Serialize the Bill objects and return them in the response
@@ -33,45 +31,6 @@ def create_subscription(request, investor_id):
     else:
         # If there's an error or no bills were created
         return Response(result, status=status.HTTP_400_BAD_REQUEST)
-    
-    try:
-        # Fetch the investment object
-        investment = get_object_or_404(Investment, id=investment_id)
-        investor = investment.investor  # Get the associated investor for this investment
-        current_date = get_current_date()
-
-        # Calculate the upfront fee using the helper method
-        bill = Bill(investor=investor, investment=investment, bill_type="upfront_fees", issue_date=current_date)
-        upfront_fee_amount = bill.calculate_upfront_fee()
-        investment_year = bill.calculate_next_upfront_year()
-        years_paid = investment.years_paid + 5
-        print(investment.investment_date.year, years_paid)
-
-        bill_data = {
-            "investor": investor.id,
-            "investment": investment.id,
-            "bill_type": "upfront_fees",
-            "bill_year" : investment_year,
-            "amount": upfront_fee_amount,
-            "description": f"Upfront fees paid till {investment_year}"
-        }
-        # Serialize and save the bill
-        serializer = BillSerializer(data=bill_data)
-        if serializer.is_valid():
-            serializer.save()
-
-            # Update the investment's upfront fee status
-            investment.upfront_fees_paid = True
-            investment.years_paid = years_paid
-            investment.bill_type_year["upfront_fees"].append(investment_year)
-            investment.save()
-
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def create_upfront_fees(request,investment_id):
@@ -79,13 +38,9 @@ def create_upfront_fees(request,investment_id):
         # Fetch the investment and investor
         investment = get_object_or_404(Investment, id=investment_id)
         investor = investment.investor
-        print(investment,'investor', investor)
-        current_date = get_current_date()
 
         # Generate upfront fees via a model method
-        print('invesment', investment)
         bill = Bill.generate_upfront_fee_bill(investment)
-        print('after bill',bill)
         return Response(BillSerializer(bill).data, status=status.HTTP_201_CREATED)
 
     except ValidationError as e:
@@ -93,79 +48,100 @@ def create_upfront_fees(request,investment_id):
     except Exception as e:
         return Response({"error": "Unexpected error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# @api_view(['POST'])
+# def create_yearly_fees(request, investment_id):
+#     try:
+#         investment = get_object_or_404(Investment, id=investment_id)
+#         investor = investment.investor  # Get the associated investor for this investment
+#         investment_date = investment.investment_date
+#         current_year = get_current_year()
+#         current_date = get_current_date()
+
+#         last_upfront_year = (
+#             max(investment.bill_type_year["upfront_fees"])
+#             if "upfront_fees" in investment.bill_type_year
+#             else None
+#         )
+
+        
+#         if last_upfront_year and last_upfront_year >= current_year:
+#             return Response(
+#                 {"error": "Investor has already paid upfront fees covering years beyond the current year."},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         yearly_fees = []
+#         years_paid = investment.years_paid  # Track the year in terms of fees (1st year, 2nd year, etc.)
+#         print('years_paid', years_paid, investment_date.year)
+#         # Iterate through the years since the investment
+#         for year in range(investment_date.year, current_year + 1):  # +1 to include current year
+#             # Check if the yearly fee bill already exists for this year
+
+#             if Bill.objects.filter(investor=investor, investment=investment, bill_type="yearly_fees", bill_year=year).exists():
+#                 # If a bill already exists for this year, skip it
+#                 continue
+
+#             # Create a new Bill instance for the current year
+#             bill = Bill(investor=investor, investment=investment, bill_type="yearly_fees", issue_date=current_date)
+#             print('bill', bill)
+
+#             # Calculate the yearly fee using the calculate_yearly_fee method
+#             yearly_fee = bill.calculate_yearly_fee(years_paid)
+#             print('yearly_________paid')
+
+#             bill_data = Bill.create_bill(
+#             investor=investor,
+#             investment=investment,
+#             bill_type="yearly_fee",
+#             amount=yearly_fee,
+#             description=f"Upfront fees paid till {year}",
+#             bill_year=year
+#         )
+
+#             # Serialize and save the bill
+#             serializer = BillSerializer(data=bill_data)
+#             if serializer.is_valid():
+#                 # Save the bill instance
+#                 # Increment the year of fee (1st, 2nd, etc.)
+#                 years_paid += 1
+#                 investment.years_paid = years_paid
+#                 investment.save()
+#                 serializer.save()  # Save the bill after successful validation
+#                 yearly_fees.append(serializer.data)
+#             else:
+#                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+#         # Return the list of created bills
+#         if yearly_fees:
+#             return Response(yearly_fees, status=status.HTTP_201_CREATED)
+#         else:
+#             return Response(
+#                 {"message": "No new yearly fee bills created; all years already billed."},
+#                 status=status.HTTP_200_OK
+#             )
+
+#     except Exception as e:
+#         return Response(
+#             {"error": str(e)},
+#             status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#         )
+
 @api_view(['POST'])
 def create_yearly_fees(request, investment_id):
     try:
+        # Fetch the investment and associated investor
         investment = get_object_or_404(Investment, id=investment_id)
-        investor = investment.investor  # Get the associated investor for this investment
-        investment_date = investment.investment_date
-        current_year = get_current_year()
-        current_date = get_current_date()
+        print(investment)
 
-        last_upfront_year = (
-            max(investment.bill_type_year["upfront_fees"])
-            if "upfront_fees" in investment.bill_type_year
-            else None
-        )
+        # Call the model method to create the yearly fees bills
+        yearly_fees_response = Bill.create_yearly_fees(investment)
 
+        # Return the appropriate response based on the result
+        if "error" in yearly_fees_response:
+            return Response(yearly_fees_response, status=status.HTTP_400_BAD_REQUEST)
         
-        if last_upfront_year and last_upfront_year >= current_year:
-            return Response(
-                {"error": "Investor has already paid upfront fees covering years beyond the current year."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        yearly_fees = []
-        years_paid = investment.years_paid  # Track the year in terms of fees (1st year, 2nd year, etc.)
-        print('years_paid', years_paid, investment_date.year)
-        # Iterate through the years since the investment
-        for year in range(investment_date.year, current_year + 1):  # +1 to include current year
-            # Check if the yearly fee bill already exists for this year
-
-            if Bill.objects.filter(investor=investor, investment=investment, bill_type="yearly_fees", bill_year=year).exists():
-                # If a bill already exists for this year, skip it
-                continue
-
-            # Create a new Bill instance for the current year
-            bill = Bill(investor=investor, investment=investment, bill_type="yearly_fees", issue_date=current_date)
-            print('bill', bill)
-
-            # Calculate the yearly fee using the calculate_yearly_fee method
-            yearly_fee = bill.calculate_yearly_fee(years_paid)
-            print('yearly_________paid')
-
-            # Prepare bill data
-            bill_data = {
-                "investor": investor.id,
-                "investment":investment_id,
-                "bill_type": "yearly_fees",
-                "amount": yearly_fee,
-                "description": f"Yearly subscription fee for {years_paid + 1}th year ({year} investment)",
-                "bill_year": year
-            }
-            print('current_year', year)
-
-            # Serialize and save the bill
-            serializer = BillSerializer(data=bill_data)
-            if serializer.is_valid():
-                # Save the bill instance
-                # Increment the year of fee (1st, 2nd, etc.)
-                years_paid += 1
-                investment.years_paid = years_paid
-                investment.save()
-                serializer.save()  # Save the bill after successful validation
-                yearly_fees.append(serializer.data)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        # Return the list of created bills
-        if yearly_fees:
-            return Response(yearly_fees, status=status.HTTP_201_CREATED)
-        else:
-            return Response(
-                {"message": "No new yearly fee bills created; all years already billed."},
-                status=status.HTTP_200_OK
-            )
+        serializer = BillSerializer(yearly_fees_response, many=True)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     except Exception as e:
         return Response(
@@ -176,15 +152,23 @@ def create_yearly_fees(request, investment_id):
 @api_view(['GET'])
 def get_bill_by_investor(request,investor_id):
      try:
-        bills = Bill.objects.filter(investor_id=investor_id)
-        if not bills:
-            return Response({"detail": "No bills found for this investor."}, status=status.HTTP_404_NOT_FOUND)
+        bill_type = request.query_params.get('bill_type', None)
 
+        if bill_type:
+            bills = Bill.objects.filter(investor_id=investor_id, bill_type=bill_type)
+        else:
+            bills = Bill.objects.filter(investor_id=investor_id)
+
+        # Check if any bills are found
+        if not bills.exists():
+            return Response({"detail": "No bills found for the specified criteria."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Serialize the bills
         serializer = BillSerializer(bills, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-     except Bill.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+     except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
      
 @api_view(['DELETE'])
 def delete_bill(request,pk):
@@ -208,16 +192,3 @@ def update_bill(request,pk):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-def create_bill(investor, investment, bill_type, amount, description, bill_year):
-    bill_data = {
-        "investor": investor.id,
-        "investment": investment.id,
-        "bill_type": bill_type,
-        "bill_year": bill_year,
-        "amount": amount,
-        "description": description,
-    }
-    serializer = BillSerializer(data=bill_data)
-    serializer.is_valid(raise_exception=True)
-    return serializer.save()

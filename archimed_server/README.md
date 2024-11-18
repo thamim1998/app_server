@@ -1,4 +1,4 @@
-# Assumptions and Edge Cases in Fee Calculation Solution
+# Description about the every segment of this system
 
 ## **Investment Date Validity**
 It is assumed that the investment_date is valid and falls within the same calendar year as the fee calculation. The calculation considers only the fraction of the year after the investment date.
@@ -13,12 +13,33 @@ The end of the year is fixed as December 31st of the same year as the investment
 The solution handles both regular years (365 days) and leap years (366 days) by checking if the year is a leap year.
 
 ## **Yearly Fee Calculation**
-The fee is calculated proportionally to the number of years investment made.
+The fee is calculated proportionally to the number of years investment made. Based on the years, fee percentage might change.
 
 ## **Input Data Validity**
 The input data (investment amount, fee percentage, and investment date) is assumed to be valid and correctly formatted.
 
 # **Edge Cases Handled in This System**
+
+## **Uniqueness of Entities**
+
+### **Investor**
+
+- **Investors** are unique in the system. Each investor can have multiple investments, but each investor record is singular and cannot be duplicated. 
+- The system ensures that no duplicate **investor** data exists.
+
+### **Investment**
+- Each **investment** is also unique. An **investment** record is tied to a specific **investor** and contains investment-specific details, such as the **investment_date**, **investment_amount**, **fee_percentage**, and the corresponding **yearly_fee**.
+- The system allows an investor to make multiple investments, but each **investment** record is distinct and cannot be duplicated.
+
+### **Bills**
+- **Bills** are generated for each **investment** based on the relevant fees. Each bill has unique characteristics such as **bill_type** (upfront, yearly, membership) and **bill_year**, ensuring no duplication of bills for the same **investment** and year.
+- A **bill** is associated with an **investment** and can have details about the fee type, amount, description, and due date.
+- Each **bill** has a unique identifier that prevents the same bill from being generated multiple times for the same **investment**.
+
+### **Capital Call**
+- **Capital Calls** represent the total amount owed by an investor across all their investments, summed from the various **bills**. 
+- The **capital_call** is a unique total for an investor and is generated once, based on all outstanding **bills**. 
+- The system ensures that the **capital call** for an investor is unique, meaning each **capital call** can only be generated once for an investor for each period.
 
 ## **Multiple Investments**
 - An investor can make multiple investments over time, each of which may have a different investment date, amount, and fee calculation based on the investment date and fee percentage.

@@ -1,3 +1,4 @@
+from django.forms import ValidationError
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -22,6 +23,8 @@ def create_subscription(request, investor_id):
     # Call the model's method to create the membership bills
     result = Bill.create_membership_bills(investor)
 
+    print('result', result)
+
     # Handle the result returned by the model method
     if isinstance(result, list):  # If bills were created
         # Serialize the Bill objects and return them in the response
@@ -31,9 +34,6 @@ def create_subscription(request, investor_id):
         # If there's an error or no bills were created
         return Response(result, status=status.HTTP_400_BAD_REQUEST)
     
-
-@api_view(['POST'])
-def create_upfront_fees(request, investment_id):
     try:
         # Fetch the investment object
         investment = get_object_or_404(Investment, id=investment_id)
@@ -43,8 +43,8 @@ def create_upfront_fees(request, investment_id):
         # Calculate the upfront fee using the helper method
         bill = Bill(investor=investor, investment=investment, bill_type="upfront_fees", issue_date=current_date)
         upfront_fee_amount = bill.calculate_upfront_fee()
+        investment_year = bill.calculate_next_upfront_year()
         years_paid = investment.years_paid + 5
-        investment_year = investment.investment_date.year + years_paid
         print(investment.investment_date.year, years_paid)
 
         bill_data = {
@@ -72,7 +72,27 @@ def create_upfront_fees(request, investment_id):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
+@api_view(['POST'])
+def create_upfront_fees(request,investment_id):
+    try:
+        # Fetch the investment and investor
+        investment = get_object_or_404(Investment, id=investment_id)
+        investor = investment.investor
+        print(investment,'investor', investor)
+        current_date = get_current_date()
+
+        # Generate upfront fees via a model method
+        print('invesment', investment)
+        bill = Bill.generate_upfront_fee_bill(investment)
+        print('after bill',bill)
+        return Response(BillSerializer(bill).data, status=status.HTTP_201_CREATED)
+
+    except ValidationError as e:
+        return Response({"error": e.detail}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error": "Unexpected error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 @api_view(['POST'])
 def create_yearly_fees(request, investment_id):
     try:
@@ -83,14 +103,13 @@ def create_yearly_fees(request, investment_id):
         current_date = get_current_date()
 
         last_upfront_year = (
-            investment.bill_type_year["upfront_fees"][-1]
+            max(investment.bill_type_year["upfront_fees"])
             if "upfront_fees" in investment.bill_type_year
             else None
         )
 
-        print('lastFee',last_upfront_year)
         
-        if last_upfront_year and last_upfront_year > current_year:
+        if last_upfront_year and last_upfront_year >= current_year:
             return Response(
                 {"error": "Investor has already paid upfront fees covering years beyond the current year."},
                 status=status.HTTP_400_BAD_REQUEST
@@ -121,7 +140,7 @@ def create_yearly_fees(request, investment_id):
                 "investment":investment_id,
                 "bill_type": "yearly_fees",
                 "amount": yearly_fee,
-                "description": f"Yearly subscription fee for {years_paid+1}th year ({year} investment)",
+                "description": f"Yearly subscription fee for {years_paid + 1}th year ({year} investment)",
                 "bill_year": year
             }
             print('current_year', year)
@@ -189,3 +208,16 @@ def update_bill(request,pk):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+def create_bill(investor, investment, bill_type, amount, description, bill_year):
+    bill_data = {
+        "investor": investor.id,
+        "investment": investment.id,
+        "bill_type": bill_type,
+        "bill_year": bill_year,
+        "amount": amount,
+        "description": description,
+    }
+    serializer = BillSerializer(data=bill_data)
+    serializer.is_valid(raise_exception=True)
+    return serializer.save()

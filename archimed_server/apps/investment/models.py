@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from apps.investors.models import Investor
 
@@ -30,3 +31,9 @@ class Investment(models.Model):
     
     def get_fee_percentage(self):
         return self.fee_percentage / 100
+    
+    def calculate_upfront_fee(self):
+        fee_percentage = self.get_fee_percentage()
+        upfront_fee_amount = Decimal(fee_percentage * self.investment_amount * 5).quantize(Decimal("0.01"))
+        return upfront_fee_amount
+    

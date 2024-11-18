@@ -14,7 +14,9 @@ def create_capital(request):
     bill_ids = request.data.get("bill_ids", [])
     due_date = request.data.get("due_date")
 
-    print('bill_id',due_date,bill_ids)
+
+    if not len(bill_ids):
+        return Response({"error": "Atleast one bill is required."}, status=status.HTTP_400_BAD_REQUEST)
 
     # Check if the investor_id is provided
     if not investor_id:
@@ -72,6 +74,16 @@ def get_all_capitals(request):
       
       except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+      
+@api_view(['GET'])
+def get_capital(request,pk):
+      try:
+        capitals = Capital.objects.get(pk=pk)
+        serializer = CapitalSerializer(capitals)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+      
+      except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 def get_investor_capitals(request,investor_id):
@@ -81,7 +93,7 @@ def get_investor_capitals(request,investor_id):
             return Response({"Detail":"No invoice found for this investor"},status=status.HTTP_204_NO_CONTENT)
         
         serializer = CapitalSerializer(capitals,many=True)
-        return Response(serializer, status=status.HTTP_202_ACCEPTED)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
     
     except Capital.DoesNotExist:
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -104,6 +116,7 @@ def delete_capital(request, pk):
 
 @api_view(['PATCH'])
 def update_capital(request, pk):
+    print(pk)
     try:
         capital = Capital.objects.get(pk=pk)
 
@@ -113,5 +126,6 @@ def update_capital(request, pk):
     serializer = CapitalSerializer(capital, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
-        return Response(status=status.HTTP_202_ACCEPTED)
+        return Response({"Detail":"Successfully validated the billl"},status=status.HTTP_202_ACCEPTED)
     return Response(status=status.HTTP_406_NOT_ACCEPTABLE)
+

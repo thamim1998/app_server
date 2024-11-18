@@ -114,7 +114,6 @@ def delete_capital(request, pk):
 
 @api_view(['PATCH'])
 def update_capital(request, pk):
-    print(pk)
     try:
         capital = Capital.objects.get(pk=pk)
 

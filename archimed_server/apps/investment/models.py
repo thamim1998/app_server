@@ -21,7 +21,6 @@ class Investment(models.Model):
         bill_years = {}
         bills = Bill.objects.filter(investment=self).filter(bill_type__in=['yearly_fees', 'upfront_fees'])
         for bill in bills:
-            print(bill)
             if bill.bill_type not in bill_years:
                 bill_years[bill.bill_type] = []
 

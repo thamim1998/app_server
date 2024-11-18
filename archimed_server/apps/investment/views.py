@@ -25,8 +25,6 @@ def create_investment(request, investor_id):
         investor_id=investor_id
     )
 
-    print('investor', investor)
-
     investor.invested_amount += investment_amount
     investor.save()
 

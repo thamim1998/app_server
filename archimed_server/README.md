@@ -1,40 +1,28 @@
 # Description about the every segment of this system
 
-## **Investment Date Validity**
-It is assumed that the **investment_date** is valid and falls within the same calendar year as the fee calculation. The calculation considers only the fraction of the year after the investment date.
-
-## **Fee Percentage**
-The **fee_percentage** is provided as a whole number (e.g., 9.5), which is converted to a decimal (e.g., 0.095) for calculation.
-
-## **End of Year**
-The end of the year is fixed as December 31st of the same year as the **investment_date**.
-
-## **Leap Year Consideration**
-The solution handles both regular years (365 days) and leap years (366 days) by checking if the year is a leap year.
-
-## **Yearly Fee Calculation**
-The fee is calculated proportionally to the number of years investment made. Based on the years, fee percentage might change.
-
-## **Input Data Validity**
-The input data (**investment amount**, **fee percentage**, and **investment date**) is assumed to be valid and correctly formatted.
-
-# **Edge Cases Handled in This System**
-
 ## **Uniqueness of Entities**
 
 ### **Investor**
-
 - **Investors** are unique in the system. Each investor can have multiple investments, but each investor record is singular and cannot be duplicated. 
 - The system ensures that no duplicate **investor** data exists.
 
 ### **Investment**
-- Each **investment** is also unique. An **investment** record is tied to a specific **investor** and contains investment-specific details, such as the **investment_date**, **investment_amount**, **fee_percentage**, and the corresponding **yearly_fee**.
+- Each **investment** is also unique. An **investment** record is tied to a specific **investor** and contains investment-specific details, such as the **investment_date**, **investment_amount**, **fee_percentage**,**upfromt_fee**, **yearly_fee** and the corresponding **membership_fee**.
 - The system allows an investor to make multiple investments, but each **investment** record is distinct and cannot be duplicated.
 
 ### **Bills**
 - **Bills** are generated for each **investment** based on the relevant fees. Each bill has unique characteristics such as **bill_type** (upfront, yearly, membership) and **bill_year**, ensuring no duplication of bills for the same **investment** and year.
 - A **bill** is associated with an **investment** and can have details about the fee type, amount, description, and due date.
 - Each **bill** has a unique identifier that prevents the same bill from being generated multiple times for the same **investment**.
+
+### **Active Member** ###
+- An **active member** is an **investor** who is currently participating in the program and has been explicitly marked as active by the **administrator**.
+
+### **Membership** ###
+ - This fee is calculated annually and is separate from investment-specific fees (like **upfront fees** or **yearly fees** for individual investments).
+ - No membership fee bills are generated for **inactive investors**.
+ - A **membership fee** is waived for **investors** who have invested more than **50,000 EUR**.
+ - If an investor becomes active in a year later than their **initial investment**, **membership fees are calculated starting from the year they became active** (not their investment year). 
 
 ### **Capital Call**
 - **Capital Calls** represent the total amount owed by an investor across all their investments, summed from the various **bills**. 
@@ -66,4 +54,4 @@ The input data (**investment amount**, **fee percentage**, and **investment date
 - The due date for the capital call is set to 1 month from the date of generation.
 
 ## **Administrator Flexibility**
-- Administrators will have the flexibility to modify or delete specific bills for individual investments as needed, allowing for a tailored billing process that can accommodate changes in payment structures, billing periods, or other adjustments specific to individual investments.
+- Administrators will have the flexibility to modify or delete specific bills for individual investments as needed, allowing for a tailored billing process that can accommodate changes in status, billing periods, or other adjustments specific to individual investments.
